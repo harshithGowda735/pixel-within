@@ -83,6 +83,126 @@ const LAVA_PIXEL_ROWS: Array[String] = [
 	"LLLLLLLLLLLLLLLL",
 ]
 
+# Vine chroma pixel (G)
+const VINE_PIXEL_ROWS: Array[String] = [
+	"LLLLLLLLLLLLLLLL",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMDLMLLMMMML",
+	"LMMMMMLMDMMMMMML",
+	"LMMMMMDMLDMMMMML",
+	"LMMMMMLDMLMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LLLLLLLLLLLLLLLL",
+]
+
+# Spark chroma pixel (Y)
+const SPARK_PIXEL_ROWS: Array[String] = [
+	"LLLLLLLLLLLLLLLL",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMDLMLLMMMML",
+	"LMMMMMLMDMMMMMML",
+	"LMMMMMDMLDMMMMML",
+	"LMMMMMLDMLMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LMMMMMMMMMMMMMML",
+	"LLLLLLLLLLLLLLLL",
+]
+
+# Vine fill (V) - Climbable
+const VINE_FILL_ROWS: Array[String] = [
+	"IIIIIIIDMMDIIIII",
+	"IIIIIIIDLLDIIIII",
+	"IIIIILLDMMDIIIII",
+	"IIIIIMMDMMDLLIII",
+	"IIIIIIIDMMDMMIII",
+	"IIIIIIIDLLDIIIII",
+	"IIIILLIDMMDIIIII",
+	"IIIIMMDDMMDIIIII",
+	"IIIIIIIDLLDMMIII",
+	"IIIIIIIDMMDLLIII",
+	"IIIIIIIDMMDIIIII",
+	"IIIIILLDMMDIIIII",
+	"IIIIIMMDLLDIIIII",
+	"IIIIIIIDMMDMMIII",
+	"IIIIIIIDMMDLLIII",
+	"IIIIIIIDLLDIIIII",
+]
+
+# Spark fill (S) - Bounce pad
+const SPARK_FILL_ROWS: Array[String] = [
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIMIIIIIIIIMII",
+	"IIIMLMIIIIIIMLMI",
+	"IIMLLLMIIIIIMLLM",
+	"DDDDDDDDDDDDDDDD",
+	"DMMMMMMMMMMMMMMD",
+	"DLLLLLLLLLLLLLLD",
+]
+
+# Water fill (W)
+const WATER_FILL_ROWS: Array[String] = [
+	"DDLLDDDDDDLLDDDD",
+	"DDMMDDDDDDMMDDDD",
+	"DDDDDDDDDDDDDDDD",
+	"DDDDDDLLDDDDDDLL",
+	"DDDDDDMMDDDDDDMM",
+	"DDDDDDDDDDDDDDDD",
+	"DDLLDDDDDDLLDDDD",
+	"DDMMDDDDDDMMDDDD",
+	"DDDDDDDDDDDDDDDD",
+	"DDDDDDLLDDDDDDLL",
+	"DDDDDDMMDDDDDDMM",
+	"DDDDDDDDDDDDDDDD",
+	"DDLLDDDDDDLLDDDD",
+	"DDMMDDDDDDMMDDDD",
+	"DDDDDDDDDDDDDDDD",
+	"DDDDDDDDDDDDDDDD",
+]
+
+# Lava fill (L)
+const LAVA_FILL_ROWS: Array[String] = [
+	"DDLLDDDDDDLLDDDD",
+	"DDMMDDDDDDMMDDDD",
+	"DDDDDDDDDDDDDDDD",
+	"DDDDDDLLDDDDDDLL",
+	"DDDDDDMMDDDDDDMM",
+	"DDDDDDDDDDDDDDDD",
+	"DDLLDDDDDDLLDDDD",
+	"DDMMDDDDDDMMDDDD",
+	"DDDDDDDDDDDDDDDD",
+	"DDDDDDLLDDDDDDLL",
+	"DDDDDDMMDDDDDDMM",
+	"DDDDDDDDDDDDDDDD",
+	"DDLLDDDDDDLLDDDD",
+	"DDMMDDDDDDMMDDDD",
+	"DDDDDDDDDDDDDDDD",
+	"DDDDDDDDDDDDDDDD",
+]
+
 # Exit door (E) - Stone arch with cream glow
 const EXIT_DOOR_ROWS: Array[String] = [
 	"IIISSSSSSSSSVIII",
@@ -101,26 +221,6 @@ const EXIT_DOOR_ROWS: Array[String] = [
 	"SsyyYYYYYYYYyyyS",
 	"ISssssssssssssSI",
 	"IISSSSSSSSSSSSII",
-]
-
-# Player spawn (@) - Pix standing at spawn
-const SPAWN_ROWS: Array[String] = [
-	"IIIIIIIIIIIIIIII",
-	"IIII  ....  IIII",
-	"IIII .YYYY. IIII",
-	"IIII .Y.YY. IIII",
-	"IIII .YYYY. IIII",
-	"III.PPPPPP. IIII",
-	"III.PPPPPPPP.III",
-	"IIII .YYYY.  .II",
-	"IIII .YYYY... II",
-	"IIII .YYYY. IIII",
-	"IIII .YYYY. IIII",
-	"IIII .YY.YY.IIII",
-	"IIII .YY.YY.IIII",
-	"IIII .ss.ss.IIII",
-	"IIII  .. .. IIII",
-	"IIIIIIIIIIIIIIII",
 ]
 
 # Air tile (.)
@@ -149,7 +249,6 @@ static var _textures: Dictionary = {}
 static func get_tile_texture(tile_char: String, pos: Vector2i = Vector2i.ZERO) -> Texture2D:
 	var key := tile_char
 	if tile_char == "#":
-		# Alternate stone variants based on position
 		var variant := (pos.x + pos.y) % 2
 		key = "#_" + str(variant)
 
@@ -181,11 +280,49 @@ static func _create_tile_texture(key: String, tile_char: String) -> Texture2D:
 				"M": Palette.WATER_MID,
 				"D": Palette.WATER_DARK,
 			})
+		"W":
+			return _build_texture_from_strings(WATER_FILL_ROWS, {
+				"L": Palette.WATER_LIGHT,
+				"M": Palette.WATER_MID,
+				"D": Palette.WATER_DARK,
+			})
 		"R":
 			return _build_texture_from_strings(LAVA_PIXEL_ROWS, {
 				"L": Palette.LAVA_LIGHT,
 				"M": Palette.LAVA_MID,
 				"D": Palette.LAVA_DARK,
+			})
+		"L":
+			return _build_texture_from_strings(LAVA_FILL_ROWS, {
+				"L": Palette.LAVA_LIGHT,
+				"M": Palette.LAVA_MID,
+				"D": Palette.LAVA_DARK,
+			})
+		"G":
+			return _build_texture_from_strings(VINE_PIXEL_ROWS, {
+				"L": Palette.VINE_LIGHT,
+				"M": Palette.VINE_MID,
+				"D": Palette.VINE_DARK,
+			})
+		"V":
+			return _build_texture_from_strings(VINE_FILL_ROWS, {
+				"L": Palette.VINE_LIGHT,
+				"M": Palette.VINE_MID,
+				"D": Palette.VINE_DARK,
+				"I": Palette.INK,
+			})
+		"Y":
+			return _build_texture_from_strings(SPARK_PIXEL_ROWS, {
+				"L": Palette.SPARK_LIGHT,
+				"M": Palette.SPARK_MID,
+				"D": Palette.SPARK_DARK,
+			})
+		"S":
+			return _build_texture_from_strings(SPARK_FILL_ROWS, {
+				"L": Palette.SPARK_LIGHT,
+				"M": Palette.SPARK_MID,
+				"D": Palette.SPARK_DARK,
+				"I": Palette.INK,
 			})
 		"E":
 			return _build_texture_from_strings(EXIT_DOOR_ROWS, {
@@ -196,21 +333,11 @@ static func _create_tile_texture(key: String, tile_char: String) -> Texture2D:
 				"y": Palette.SPARK_MID,
 				"Y": Palette.SPARK_LIGHT,
 			})
-		"@":
-			return _build_texture_from_strings(SPAWN_ROWS, {
-				"I": Palette.INK,
-				" ": Palette.INK,
-				".": Palette.INK,
-				"Y": Palette.SPARK_LIGHT,
-				"P": Palette.PINK,
-				"s": Palette.STONE_DARK,
-			})
-		".":
+		"@", ".":
 			return _build_texture_from_strings(AIR_ROWS, {
 				"I": Palette.INK,
 			})
 		_:
-			# Fallback for any other valid tile
 			return _build_flat_tile(Palette.INK)
 
 static func _build_texture_from_strings(rows: Array[String], char_map: Dictionary) -> Texture2D:

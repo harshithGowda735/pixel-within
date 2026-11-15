@@ -1,12 +1,17 @@
 extends Node2D
 
 var level_data: Dictionary = {}
+var player: Player
 
 func _ready() -> void:
 	level_data = LevelLoader.load_level("res://levels/canvas_01.txt")
 	if not level_data.get("valid", false):
 		push_error("Failed to load Canvas Level 1: " + level_data.get("error", "Unknown error"))
 		return
+
+	player = Player.new()
+	add_child(player)
+	player.setup(level_data["grid"], level_data.get("player_spawn", Vector2i(1, 9)))
 	queue_redraw()
 
 func _draw() -> void:
