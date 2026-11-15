@@ -60,6 +60,9 @@ var nearest_dive_target := Vector2i(-1, -1)
 # Nearest heart target
 var nearest_heart_target := Vector2i(-1, -1)
 
+# Pulsing bracket timer
+var bracket_pulse_timer := 0.0
+
 # Current body pigment color
 var current_pigment := ""
 
@@ -111,6 +114,8 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func update_physics(delta: float) -> void:
+	bracket_pulse_timer += delta
+
 	if is_dead:
 		death_timer -= delta
 		if death_timer <= 0.0:
@@ -450,15 +455,38 @@ func _draw() -> void:
 	if tex != null:
 		draw_texture(tex, Vector2(-1.0, -2.0))
 
-	# Draw visual indicator for nearest dive target if within range (Section 3.2)
+	# Draw pulsing corner-bracket indicator for nearest dive target (Section 3.2)
 	if nearest_dive_target != Vector2i(-1, -1):
-		var target_rect := Rect2(nearest_dive_target.x * 16.0 - position.x, nearest_dive_target.y * 16.0 - position.y, 16.0, 16.0)
-		draw_rect(target_rect, Palette.SPARK_LIGHT, false, 1.0)
+		var is_bright := fmod(bracket_pulse_timer, 0.4) < 0.2
+		var dive_color := Palette.SPARK_LIGHT if is_bright else Palette.SPARK_MID
+		_draw_corner_brackets(nearest_dive_target, dive_color)
 
-	# Draw visual indicator for heart if within range
+	# Draw pulsing corner-bracket indicator for heart if within range
 	if nearest_heart_target != Vector2i(-1, -1):
-		var heart_rect := Rect2(nearest_heart_target.x * 16.0 - position.x, nearest_heart_target.y * 16.0 - position.y, 16.0, 16.0)
-		draw_rect(heart_rect, Palette.PINK, false, 1.0)
+		var is_bright := fmod(bracket_pulse_timer, 0.4) < 0.2
+		var heart_color := Palette.PINK if is_bright else Palette.LAVA_LIGHT
+		_draw_corner_brackets(nearest_heart_target, heart_color)
+
+func _draw_corner_brackets(tile_pos: Vector2i, color: Color) -> void:
+	var rx := tile_pos.x * 16.0 - position.x
+	var ry := tile_pos.y * 16.0 - position.y
+	var b_len := 4.0
+
+	# Top-left corner
+	draw_rect(Rect2(rx, ry, b_len, 1.0), color)
+	draw_rect(Rect2(rx, ry, 1.0, b_len), color)
+
+	# Top-right corner
+	draw_rect(Rect2(rx + 16.0 - b_len, ry, b_len, 1.0), color)
+	draw_rect(Rect2(rx + 15.0, ry, 1.0, b_len), color)
+
+	# Bottom-left corner
+	draw_rect(Rect2(rx, ry + 15.0, b_len, 1.0), color)
+	draw_rect(Rect2(rx, ry + 16.0 - b_len, 1.0, b_len), color)
+
+	# Bottom-right corner
+	draw_rect(Rect2(rx + 16.0 - b_len, ry + 15.0, b_len, 1.0), color)
+	draw_rect(Rect2(rx + 15.0, ry + 16.0 - b_len, 1.0, b_len), color)
 
 # Input helpers
 func get_horizontal_input() -> float:

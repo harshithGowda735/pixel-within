@@ -218,8 +218,73 @@ func _init() -> void:
 	assert(exit_tile == "E")
 	print("PASS: Complete Canvas Level 1 core loop successfully executed end-to-end!")
 
+	# --- Test 15: Interaction Range, Corner Brackets, Empty Stack Surface & Swap Guard ---
+	print("\n[Test 15] Testing Dive Target Range, Empty Surface, and Swap Guards...")
+	# Empty stack surface:
+	assert(game.stack.is_empty())
+	assert(game.surface() == false)
+	print("PASS: Surfacing with empty stack cleanly returns false")
+
+	# Swap guard:
+	game.is_swapping = true
+	assert(game.dive(Vector2i(4, 9)) == false)
+	assert(game.surface() == false)
+	assert(game.paint_heart("b") == false)
+	game.is_swapping = false
+	print("PASS: Re-entrant dive/surface/paint during swap safely rejected")
+
+	# Target selection & range:
+	var canvas_grid: Dictionary = game.get_current_world()["grid"]
+	player.setup(canvas_grid, Vector2i(1, 9)) # At (1, 9), distance to B at (4, 9) is 3 tiles = 48 px (> 24 px)
+	player.update_interaction_targets()
+	assert(player.nearest_dive_target == Vector2i(-1, -1))
+	print("PASS: Chroma tile at 48 px correctly NOT targeted (range > 24 px)")
+
+	# Move player closer: tile (3, 9) center is at (56, 152), tile (4, 9) center is at (72, 152) -> distance is 16 px (< 24 px)
+	player.sim_position = Vector2(3 * 16.0 + 4.0, 9 * 16.0 + 4.0)
+	player.update_interaction_targets()
+	assert(player.nearest_dive_target == Vector2i(4, 9))
+	print("PASS: Nearest chroma tile at 16 px correctly targeted")
+
+	# Verify non-chroma tiles (walls, air, fill) are never targeted
+	canvas_grid[Vector2i(3, 8)] = "W"
+	canvas_grid[Vector2i(3, 7)] = "#"
+	player.update_interaction_targets()
+	assert(player.nearest_dive_target == Vector2i(4, 9)) # Still points only to B
+	print("PASS: Non-chroma tiles (W, #) never selected as dive target")
+
+	# --- Test 16: Child World Death, Stack Integrity, and Re-Dive ---
+	print("\n[Test 16] Testing Child World Death, Stack Validity, and Re-Diving...")
+	# Dive into B
+	assert(game.dive(Vector2i(4, 9)) == true)
+	assert(game.stack.size() == 1)
+	assert(game.current_world_key == "canvas_01/4,9:B")
+	# Collect orb
+	game.collect_pigment("b", Vector2i(10, 5))
+	assert(game.held == "b")
+	assert(game.get_current_world()["grid"][Vector2i(10, 5)] == ".")
+	# Player dies inside child world
+	game.on_player_death()
+	assert(game.held == "")
+	# Orb restored to child world grid!
+	assert(game.get_current_world()["grid"][Vector2i(10, 5)] == "b")
+	# Stack and parent world remain intact!
+	assert(game.stack.size() == 1)
+	assert(game.current_world_key == "canvas_01/4,9:B")
+	assert(game.states.has("canvas_01"))
+	# Surface after death
+	assert(game.surface() == true)
+	assert(game.stack.is_empty())
+	assert(game.current_world_key == "canvas_01")
+	# Dive into the same tile again
+	assert(game.dive(Vector2i(4, 9)) == true)
+	assert(game.current_world_key == "canvas_01/4,9:B")
+	assert(game.get_current_world()["grid"][Vector2i(10, 5)] == "b")
+	game.surface()
+	print("PASS: Death in child world preserves stack, restores orb, and allows re-diving")
+
 	print("\n==========================================")
-	print("ALL 14 MILESTONE M3 GAME STATE TESTS PASSED!")
+	print("ALL 16 MILESTONE M3 GAME STATE TESTS PASSED!")
 	print("==========================================")
 	player.free()
 	game.free()

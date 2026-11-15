@@ -23,6 +23,9 @@ var held_source_cell: Vector2i = Vector2i(-1, -1)
 # Active world key
 var current_world_key: String = ""
 
+# Guard against re-entrant world swaps
+var is_swapping: bool = false
+
 const DIVEABLE_TILES: Array[String] = ["R", "B", "G", "Y"]
 const MAX_DIVE_DEPTH := 3
 
@@ -68,6 +71,9 @@ func get_current_world() -> Dictionary:
 
 # Dive into chroma pixel at cell (Vector2i)
 func dive(cell: Vector2i) -> bool:
+	if is_swapping:
+		return false
+
 	var cur_world := get_current_world()
 	if cur_world.is_empty():
 		return false
@@ -117,12 +123,14 @@ func dive(cell: Vector2i) -> bool:
 	var spawn: Vector2i = child_state.get("player_spawn", Vector2i(1, 9))
 	var spawn_pos := Vector2(spawn.x * 16.0 + 4.0, spawn.y * 16.0 + 4.0)
 
+	is_swapping = true
 	world_swapped.emit(child_state, spawn_pos)
+	is_swapping = false
 	return true
 
 # Surface to parent world
 func surface() -> bool:
-	if stack.is_empty():
+	if is_swapping or stack.is_empty():
 		return false
 
 	var entry: Dictionary = stack.pop_back()
@@ -138,13 +146,15 @@ func surface() -> bool:
 
 	# Return player near the dived chroma pixel
 	var return_pos := Vector2(cell.x * 16.0 + 4.0, cell.y * 16.0 + 4.0)
+	is_swapping = true
 	world_swapped.emit(parent_state, return_pos)
+	is_swapping = false
 	return true
 
 # Paint heart with held pigment
 func paint_heart(pigment: String) -> bool:
-	if stack.is_empty():
-		return false # Only possible in child worlds
+	if is_swapping or stack.is_empty():
+		return false # Only possible in child worlds and when not swapping
 
 	if pigment.is_empty() or held.is_empty():
 		return false # Must hold a pigment
