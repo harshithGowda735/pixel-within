@@ -63,6 +63,9 @@ var nearest_heart_target := Vector2i(-1, -1)
 # Pulsing bracket timer
 var bracket_pulse_timer := 0.0
 
+# Input disable flag for transitions (M4)
+var input_disabled := false
+
 # Current body pigment color
 var current_pigment := ""
 
@@ -115,6 +118,10 @@ func _physics_process(delta: float) -> void:
 
 func update_physics(delta: float) -> void:
 	bracket_pulse_timer += delta
+
+	if input_disabled:
+		velocity = Vector2.ZERO
+		return
 
 	if is_dead:
 		death_timer -= delta
@@ -214,6 +221,9 @@ func update_physics(delta: float) -> void:
 	update_interaction_targets()
 
 func handle_game_interactions() -> void:
+	if input_disabled:
+		return
+
 	var game_node := get_game_singleton()
 	if game_node == null:
 		return
@@ -221,16 +231,28 @@ func handle_game_interactions() -> void:
 	# Z: Dive into nearest chroma pixel
 	if is_dive_just_pressed():
 		if nearest_dive_target != Vector2i(-1, -1):
-			game_node.dive(nearest_dive_target)
+			var main_node = get_parent()
+			if main_node != null and main_node.has_method("start_dive_transition"):
+				main_node.start_dive_transition(nearest_dive_target)
+			else:
+				game_node.dive(nearest_dive_target)
 
 	# C or Esc: Surface to parent world
 	if is_surface_just_pressed():
-		game_node.surface()
+		var main_node = get_parent()
+		if main_node != null and main_node.has_method("start_surface_transition"):
+			main_node.start_surface_transition()
+		else:
+			game_node.surface()
 
 	# X: Paint heart
 	if is_paint_just_pressed():
 		if nearest_heart_target != Vector2i(-1, -1):
-			game_node.paint_heart(game_node.held)
+			var main_node = get_parent()
+			if main_node != null and main_node.has_method("start_paint_transition"):
+				main_node.start_paint_transition(nearest_heart_target, game_node.held)
+			else:
+				game_node.paint_heart(game_node.held)
 
 func update_interaction_targets() -> void:
 	nearest_dive_target = Vector2i(-1, -1)
@@ -398,6 +420,7 @@ func die() -> void:
 
 func respawn() -> void:
 	is_dead = false
+	input_disabled = false
 	death_timer = 0.0
 	sim_position = spawn_position
 	position = Vector2(round(sim_position.x), round(sim_position.y))
