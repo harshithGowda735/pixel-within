@@ -223,6 +223,66 @@ const EXIT_DOOR_ROWS: Array[String] = [
 	"IISSSSSSSSSSSSII",
 ]
 
+# Heart (H) - Bright 4x4 pixel pulsing with sparkle ring
+const HEART_ROWS: Array[String] = [
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIISSIISIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIISIILLLLIIISII",
+	"IIIIIILLLLIIIIII",
+	"IIIIIILLLLIIIIII",
+	"IIISIILLLLIIISII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIISSIISIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+]
+
+# Pigment orb (r, b, g, y)
+const ORB_ROWS: Array[String] = [
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIILLMMIIIIIII",
+	"IIIILLLLMMIIIIII",
+	"IIIMLLLLMMDIIIII",
+	"IIIMMMMMMDDIIIII",
+	"IIIMMMMMMDDIIIII",
+	"IIIIIMMMDDIIIIII",
+	"IIIIIIIDDIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+]
+
+# Gem (*) - Pink diamond
+const GEM_ROWS: Array[String] = [
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIISIIIIIIII",
+	"IIIIIISSSIIIIIII",
+	"IIIIIIPPPPIIIIII",
+	"IIIIIPPPPPPIIIII",
+	"IIIIPPPPPPPPIIII",
+	"IIIIIPPPPPPIIIII",
+	"IIIIIIPPPPIIIIII",
+	"IIIIIISSSIIIIIII",
+	"IIIIIIISIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+	"IIIIIIIIIIIIIIII",
+]
+
 # Air tile (.)
 const AIR_ROWS: Array[String] = [
 	"IIIIIIIIIIIIIIII",
@@ -332,6 +392,46 @@ static func _create_tile_texture(key: String, tile_char: String) -> Texture2D:
 				"V": Palette.STONE_LIGHT,
 				"y": Palette.SPARK_MID,
 				"Y": Palette.SPARK_LIGHT,
+			})
+		"H":
+			return _build_texture_from_strings(HEART_ROWS, {
+				"L": Palette.PINK,
+				"S": Palette.SPARK_LIGHT,
+				"I": Palette.INK,
+			})
+		"r":
+			return _build_texture_from_strings(ORB_ROWS, {
+				"L": Palette.LAVA_LIGHT,
+				"M": Palette.LAVA_MID,
+				"D": Palette.LAVA_DARK,
+				"I": Palette.INK,
+			})
+		"b":
+			return _build_texture_from_strings(ORB_ROWS, {
+				"L": Palette.WATER_LIGHT,
+				"M": Palette.WATER_MID,
+				"D": Palette.WATER_DARK,
+				"I": Palette.INK,
+			})
+		"g":
+			return _build_texture_from_strings(ORB_ROWS, {
+				"L": Palette.VINE_LIGHT,
+				"M": Palette.VINE_MID,
+				"D": Palette.VINE_DARK,
+				"I": Palette.INK,
+			})
+		"y":
+			return _build_texture_from_strings(ORB_ROWS, {
+				"L": Palette.SPARK_LIGHT,
+				"M": Palette.SPARK_MID,
+				"D": Palette.SPARK_DARK,
+				"I": Palette.INK,
+			})
+		"*":
+			return _build_texture_from_strings(GEM_ROWS, {
+				"P": Palette.PINK,
+				"S": Palette.SPARK_LIGHT,
+				"I": Palette.INK,
 			})
 		"@", ".":
 			return _build_texture_from_strings(AIR_ROWS, {

@@ -1,0 +1,16 @@
+name=Ocean
+type=child
+par=1
+solution=swim up, take blue orb, reach heart
+---
+####################
+#........H.........#
+#.......###........#
+#..................#
+#..................#
+#...b..............#
+#WWWWWWWWWWWWWWWWWW#
+#WWWWWWWWWWWWWWWWWW#
+#WWWWWWWWWWWWWWWWWW#
+#@WWWWWWWWWWWWWWWW.#
+####################

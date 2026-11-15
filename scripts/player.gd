@@ -31,6 +31,9 @@ const SPARK_BOUNCE_VELOCITY := -430.0
 # Death and respawn constants
 const DEATH_FREEZE_TIME := 0.50
 
+# Dive and interaction range
+const DIVE_INTERACTION_RADIUS := 24.0
+
 # State variables
 var sim_position := Vector2.ZERO
 var velocity := Vector2.ZERO
@@ -51,6 +54,14 @@ var prev_jump_held := false
 
 # Reference to the level grid: Dictionary[Vector2i, String]
 var grid: Dictionary = {}
+
+# Nearest diveable chroma pixel target
+var nearest_dive_target := Vector2i(-1, -1)
+# Nearest heart target
+var nearest_heart_target := Vector2i(-1, -1)
+
+# Current body pigment color
+var current_pigment := ""
 
 # Sprite textures
 var texture_right: Texture2D
@@ -73,8 +84,19 @@ const SPRITE_RIGHT_ROWS: Array[String] = [
 	"  .. ..   ",
 ]
 
+func get_game_singleton() -> Node:
+	if not is_inside_tree():
+		return null
+	return get_node_or_null("/root/Game")
+
 func _init() -> void:
-	_init_textures()
+	update_body_color("")
+
+func _ready() -> void:
+	# Listen to pigment changes from Game state
+	var game_node := get_game_singleton()
+	if game_node != null and not game_node.pigment_changed.is_connected(update_body_color):
+		game_node.pigment_changed.connect(update_body_color)
 
 func setup(level_grid: Dictionary, spawn_tile: Vector2i) -> void:
 	grid = level_grid
@@ -99,6 +121,9 @@ func update_physics(delta: float) -> void:
 	if is_restart_just_pressed():
 		respawn()
 		return
+
+	# Handle M3 interactions: Dive (Z), Surface (C/Esc), Paint (X)
+	handle_game_interactions()
 
 	# Check environment (water, vine)
 	check_environment()
@@ -129,7 +154,6 @@ func update_physics(delta: float) -> void:
 	# Process vertical movement
 	if is_climbing:
 		var input_y := get_vertical_input()
-		# When climbing: Space (or jump button) leaps off the vine; W/Up climbs
 		var space_pressed := Input.is_physical_key_pressed(KEY_SPACE) or Input.is_action_just_pressed("ui_accept")
 		if space_pressed or (jump_just_pressed and input_y == 0.0):
 			velocity.y = JUMP_VELOCITY
@@ -171,15 +195,67 @@ func update_physics(delta: float) -> void:
 			jump_buffer_timer = 0.0
 			is_on_floor = false
 
-		# Variable jump: release jump early cuts upward velocity (applies once on release frame)
+		# Variable jump: release jump early cuts upward velocity
 		if jump_just_released and velocity.y < 0.0:
 			velocity.y *= VARIABLE_JUMP_MULTIPLIER
 
 	# Custom tile collision
 	move_and_collide_custom(delta)
 
-	# Environmental triggers (lava, spark bounce, pit)
+	# Environmental triggers (lava, spark bounce, pit, orbs)
 	check_tile_triggers()
+
+	# Update nearest targets for dive and heart
+	update_interaction_targets()
+
+func handle_game_interactions() -> void:
+	var game_node := get_game_singleton()
+	if game_node == null:
+		return
+
+	# Z: Dive into nearest chroma pixel
+	if is_dive_just_pressed():
+		if nearest_dive_target != Vector2i(-1, -1):
+			game_node.dive(nearest_dive_target)
+
+	# C or Esc: Surface to parent world
+	if is_surface_just_pressed():
+		game_node.surface()
+
+	# X: Paint heart
+	if is_paint_just_pressed():
+		if nearest_heart_target != Vector2i(-1, -1):
+			game_node.paint_heart(game_node.held)
+
+func update_interaction_targets() -> void:
+	nearest_dive_target = Vector2i(-1, -1)
+	nearest_heart_target = Vector2i(-1, -1)
+
+	var center := sim_position + Vector2(HITBOX_WIDTH * 0.5, HITBOX_HEIGHT * 0.5)
+	var min_dive_dist := DIVE_INTERACTION_RADIUS
+	var min_heart_dist := DIVE_INTERACTION_RADIUS
+
+	# Check grid cells within 2 tiles radius
+	var center_tx := int(floor(center.x / 16.0))
+	var center_ty := int(floor(center.y / 16.0))
+
+	for ty in range(center_ty - 2, center_ty + 3):
+		for tx in range(center_tx - 2, center_tx + 3):
+			var pos := Vector2i(tx, ty)
+			var tile: String = grid.get(pos, ".")
+			var tile_center := Vector2(tx * 16.0 + 8.0, ty * 16.0 + 8.0)
+			var dist := center.distance_to(tile_center)
+
+			# Diveable chroma pixels: R, B, G, Y
+			if tile == "R" or tile == "B" or tile == "G" or tile == "Y":
+				if dist <= min_dive_dist:
+					min_dive_dist = dist
+					nearest_dive_target = pos
+			# Heart: H
+			elif tile == "H":
+				if dist <= min_heart_dist:
+					min_heart_dist = dist
+					nearest_heart_target = pos
 
 func move_and_collide_custom(delta: float) -> void:
 	# 1. Horizontal movement and collision
@@ -274,18 +350,23 @@ func check_tile_triggers() -> void:
 
 	for ty in range(min_ty, max_ty + 1):
 		for tx in range(min_tx, max_tx + 1):
-			var tile: String = grid.get(Vector2i(tx, ty), ".")
+			var pos := Vector2i(tx, ty)
+			var tile: String = grid.get(pos, ".")
 			if tile == "R" or tile == "L":
 				# Touching lava kills
 				die()
 				return
 			elif tile == "Y" or tile == "S":
-				# Spark bounce pad launches player upward when falling/landing on it
-				# Guarding with velocity.y >= 0 prevents repeated retriggering while ascending through contact
+				# Spark bounce pad launches player upward when landing on it
 				if velocity.y >= 0.0:
 					velocity.y = SPARK_BOUNCE_VELOCITY
 					is_on_floor = false
 					coyote_timer = 0.0
+			elif tile == "r" or tile == "b" or tile == "g" or tile == "y":
+				# Collect pigment orb!
+				var game_node := get_game_singleton()
+				if game_node != null:
+					game_node.collect_pigment(tile, pos)
 
 func is_tile_solid(tx: int, ty: int) -> bool:
 	if tx < 0 or tx >= 20 or ty < 0:
@@ -305,6 +386,11 @@ func die() -> void:
 	death_timer = DEATH_FREEZE_TIME
 	velocity = Vector2.ZERO
 
+	# Restore held pigment on death (Section 3.7)
+	var game_node := get_game_singleton()
+	if game_node != null:
+		game_node.on_player_death()
+
 func respawn() -> void:
 	is_dead = false
 	death_timer = 0.0
@@ -318,13 +404,39 @@ func respawn() -> void:
 	jump_buffer_timer = 0.0
 	prev_jump_held = false
 
+func update_body_color(pigment: String) -> void:
+	current_pigment = pigment
+	var body_color: Color
+	match pigment:
+		"r":
+			body_color = Palette.LAVA_MID
+		"b":
+			body_color = Palette.WATER_MID
+		"g":
+			body_color = Palette.VINE_MID
+		"y":
+			body_color = Palette.SPARK_MID
+		_:
+			# Neutral light body when holding no pigment (Section 3.4)
+			body_color = Palette.SPARK_LIGHT
+
+	texture_right = _create_sprite_texture(SPRITE_RIGHT_ROWS, body_color)
+
+	# Flipped left texture
+	var left_rows: Array[String] = []
+	for row in SPRITE_RIGHT_ROWS:
+		var flipped := ""
+		for i in range(row.length() - 1, -1, -1):
+			flipped += row[i]
+		left_rows.append(flipped)
+	texture_left = _create_sprite_texture(left_rows, body_color)
+	queue_redraw()
+
 func _draw() -> void:
 	if is_dead:
-		# Draw pixel burst particles around local center (4, 6)
 		var center := Vector2(4, 6)
 		var progress := 1.0 - (death_timer / DEATH_FREEZE_TIME)
 		var spread := progress * 8.0
-		# 2x2 square particles from palette
 		draw_rect(Rect2(center.x - spread, center.y - spread, 2, 2), Palette.PINK)
 		draw_rect(Rect2(center.x + spread, center.y - spread, 2, 2), Palette.SPARK_LIGHT)
 		draw_rect(Rect2(center.x - spread, center.y + spread, 2, 2), Palette.SPARK_MID)
@@ -337,6 +449,16 @@ func _draw() -> void:
 	var tex := texture_right if facing_right else texture_left
 	if tex != null:
 		draw_texture(tex, Vector2(-1.0, -2.0))
+
+	# Draw visual indicator for nearest dive target if within range (Section 3.2)
+	if nearest_dive_target != Vector2i(-1, -1):
+		var target_rect := Rect2(nearest_dive_target.x * 16.0 - position.x, nearest_dive_target.y * 16.0 - position.y, 16.0, 16.0)
+		draw_rect(target_rect, Palette.SPARK_LIGHT, false, 1.0)
+
+	# Draw visual indicator for heart if within range
+	if nearest_heart_target != Vector2i(-1, -1):
+		var heart_rect := Rect2(nearest_heart_target.x * 16.0 - position.x, nearest_heart_target.y * 16.0 - position.y, 16.0, 16.0)
+		draw_rect(heart_rect, Palette.PINK, false, 1.0)
 
 # Input helpers
 func get_horizontal_input() -> float:
@@ -358,29 +480,26 @@ func get_vertical_input() -> float:
 func is_jump_input_held() -> bool:
 	return Input.is_physical_key_pressed(KEY_SPACE) or Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP) or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept")
 
+func is_dive_just_pressed() -> bool:
+	return Input.is_physical_key_pressed(KEY_Z) or Input.is_action_just_pressed("dive")
+
+func is_paint_just_pressed() -> bool:
+	return Input.is_physical_key_pressed(KEY_X) or Input.is_action_just_pressed("paint")
+
+func is_surface_just_pressed() -> bool:
+	return Input.is_physical_key_pressed(KEY_C) or Input.is_physical_key_pressed(KEY_ESCAPE) or Input.is_action_just_pressed("surface")
+
 func is_restart_just_pressed() -> bool:
 	return Input.is_physical_key_pressed(KEY_R) or Input.is_action_just_pressed("restart")
 
-func _init_textures() -> void:
-	texture_right = _create_sprite_texture(SPRITE_RIGHT_ROWS)
-	
-	# Create horizontally flipped rows for facing left
-	var left_rows: Array[String] = []
-	for row in SPRITE_RIGHT_ROWS:
-		var flipped := ""
-		for i in range(row.length() - 1, -1, -1):
-			flipped += row[i]
-		left_rows.append(flipped)
-	texture_left = _create_sprite_texture(left_rows)
-
-func _create_sprite_texture(rows: Array[String]) -> Texture2D:
+func _create_sprite_texture(rows: Array[String], body_color: Color) -> Texture2D:
 	var width := 10
 	var height := 14
 	var img := Image.create(width, height, false, Image.FORMAT_RGBA8)
 	var char_to_color := {
 		" ": Color(0, 0, 0, 0),
 		".": Palette.INK,
-		"Y": Palette.SPARK_LIGHT,
+		"Y": body_color,
 		"P": Palette.PINK,
 		"s": Palette.STONE_DARK,
 	}
