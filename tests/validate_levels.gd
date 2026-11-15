@@ -102,10 +102,11 @@ solution=none
 
 	# --- Test 6: Multiple player spawns ---
 	print("\n[Test 6] Testing multiple player spawns (@)...")
-	var multi_spawn := base_template.replace("#..................#", "#........@.........#")
+	# Add a second spawn on row 9 to verify exact count = 2
+	var multi_spawn := base_template.replace("#@................E#", "#@@...............E#")
 	var res6: Dictionary = LevelLoader.parse_level(multi_spawn)
-	if not res6["valid"] and "Expected exactly one player spawn" in res6["error"]:
-		print("PASS: Correctly rejected multiple spawns: ", res6["error"])
+	if not res6["valid"] and "Expected exactly one player spawn (@), found 2" in res6["error"]:
+		print("PASS: Correctly rejected exactly 2 spawns: ", res6["error"])
 	else:
 		print("FAIL: Expected rejection for multiple spawns: ", res6)
 		all_passed = false
@@ -182,9 +183,19 @@ solution=none
 		print("FAIL: Expected rejection for corrupted file")
 		all_passed = false
 
+	# --- Test 12: Reject literal space in grid ---
+	print("\n[Test 12] Testing rejection of literal space in grid...")
+	var space_in_grid := base_template.replace("#..................#", "#........ .........#")
+	var res12: Dictionary = LevelLoader.parse_level(space_in_grid)
+	if not res12["valid"] and "Unknown character ' '" in res12["error"]:
+		print("PASS: Literal space correctly rejected: ", res12["error"])
+	else:
+		print("FAIL: Expected rejection for literal space in grid: ", res12)
+		all_passed = false
+
 	print("\n========================================")
 	if all_passed:
-		print("ALL 11 TESTS PASSED SUCCESSFULLY!")
+		print("ALL 12 TESTS PASSED SUCCESSFULLY!")
 	else:
 		print("SOME TESTS FAILED!")
 	print("========================================")

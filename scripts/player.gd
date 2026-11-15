@@ -46,6 +46,9 @@ var jump_buffer_timer := 0.0
 var swim_stroke_timer := 0.0
 var death_timer := 0.0
 
+# Edge-detection for jump inputs
+var prev_jump_held := false
+
 # Reference to the level grid: Dictionary[Vector2i, String]
 var grid: Dictionary = {}
 
@@ -117,17 +120,26 @@ func update_physics(delta: float) -> void:
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, FRICTION * delta)
 
+	# Jump input edge detection
+	var jump_held := is_jump_input_held()
+	var jump_just_pressed := jump_held and not prev_jump_held
+	var jump_just_released := prev_jump_held and not jump_held
+	prev_jump_held = jump_held
+
 	# Process vertical movement
 	if is_climbing:
 		var input_y := get_vertical_input()
-		if is_jump_just_pressed():
+		# When climbing: Space (or jump button) leaps off the vine; W/Up climbs
+		var space_pressed := Input.is_physical_key_pressed(KEY_SPACE) or Input.is_action_just_pressed("ui_accept")
+		if space_pressed or (jump_just_pressed and input_y == 0.0):
 			velocity.y = JUMP_VELOCITY
 			is_climbing = false
 		else:
 			velocity.y = input_y * CLIMB_SPEED
 	elif is_swimming:
 		var input_y := get_vertical_input()
-		if is_jump_just_pressed() and swim_stroke_timer <= 0.0:
+		var swim_jump := Input.is_physical_key_pressed(KEY_SPACE) or Input.is_action_just_pressed("ui_accept") or jump_just_pressed
+		if swim_jump and swim_stroke_timer <= 0.0:
 			velocity.y = SWIM_STROKE_VELOCITY
 			swim_stroke_timer = SWIM_STROKE_COOLDOWN
 		elif input_y < 0.0:
@@ -137,7 +149,7 @@ func update_physics(delta: float) -> void:
 		else:
 			velocity.y = minf(velocity.y + SWIM_GRAVITY * delta, SWIM_TERMINAL_VELOCITY)
 	else:
-		# Normal gravity
+		# Normal ground / air physics
 		velocity.y = minf(velocity.y + GRAVITY * delta, TERMINAL_VELOCITY)
 
 		# Coyote time
@@ -147,7 +159,7 @@ func update_physics(delta: float) -> void:
 			coyote_timer = maxf(coyote_timer - delta, 0.0)
 
 		# Jump buffer
-		if is_jump_just_pressed():
+		if jump_just_pressed:
 			jump_buffer_timer = JUMP_BUFFER_TIME
 		else:
 			jump_buffer_timer = maxf(jump_buffer_timer - delta, 0.0)
@@ -159,8 +171,8 @@ func update_physics(delta: float) -> void:
 			jump_buffer_timer = 0.0
 			is_on_floor = false
 
-		# Variable jump: release jump early cuts upward velocity
-		if is_jump_just_released() and velocity.y < 0.0:
+		# Variable jump: release jump early cuts upward velocity (applies once on release frame)
+		if jump_just_released and velocity.y < 0.0:
 			velocity.y *= VARIABLE_JUMP_MULTIPLIER
 
 	# Custom tile collision
@@ -268,10 +280,12 @@ func check_tile_triggers() -> void:
 				die()
 				return
 			elif tile == "Y" or tile == "S":
-				# Spark bounce pad launches player high
-				velocity.y = SPARK_BOUNCE_VELOCITY
-				is_on_floor = false
-				coyote_timer = 0.0
+				# Spark bounce pad launches player upward when falling/landing on it
+				# Guarding with velocity.y >= 0 prevents repeated retriggering while ascending through contact
+				if velocity.y >= 0.0:
+					velocity.y = SPARK_BOUNCE_VELOCITY
+					is_on_floor = false
+					coyote_timer = 0.0
 
 func is_tile_solid(tx: int, ty: int) -> bool:
 	if tx < 0 or tx >= 20 or ty < 0:
@@ -302,6 +316,7 @@ func respawn() -> void:
 	is_climbing = false
 	coyote_timer = 0.0
 	jump_buffer_timer = 0.0
+	prev_jump_held = false
 
 func _draw() -> void:
 	if is_dead:
@@ -340,11 +355,8 @@ func get_vertical_input() -> float:
 	if up: val -= 1.0
 	return val
 
-func is_jump_just_pressed() -> bool:
-	return Input.is_physical_key_pressed(KEY_SPACE) or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("ui_accept")
-
-func is_jump_just_released() -> bool:
-	return not (Input.is_physical_key_pressed(KEY_SPACE) or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept"))
+func is_jump_input_held() -> bool:
+	return Input.is_physical_key_pressed(KEY_SPACE) or Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP) or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept")
 
 func is_restart_just_pressed() -> bool:
 	return Input.is_physical_key_pressed(KEY_R) or Input.is_action_just_pressed("restart")

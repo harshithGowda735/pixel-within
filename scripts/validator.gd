@@ -2,7 +2,8 @@ class_name LevelValidator
 extends RefCounted
 
 # Allowed tile characters from the specification table (Section 3.3)
-const VALID_TILES: String = "#.RBGYLWVS@EHr bgy*x"
+# Valid symbols: # . R B G Y L W V S @ E H r b g y * x (no space)
+const VALID_TILES: String = "#.RBGYLWVS@EHrbgy*x"
 const VALID_TYPES: Array[String] = ["canvas", "child"]
 const EXPECTED_WIDTH: int = 20
 const EXPECTED_HEIGHT: int = 11
