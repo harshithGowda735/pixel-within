@@ -306,86 +306,99 @@ const AIR_ROWS: Array[String] = [
 # Texture cache
 static var _textures: Dictionary = {}
 
-static func get_tile_texture(tile_char: String, pos: Vector2i = Vector2i.ZERO) -> Texture2D:
-	var key := tile_char
+static func get_animation_frame_count(tile_char: String) -> int:
+	match tile_char:
+		"#": return 2
+		"R", "L": return 4
+		"B", "W": return 4
+		"G", "V": return 2
+		"Y", "S": return 3
+		"H": return 4
+		"r", "b", "g", "y", "*": return 3
+		"E": return 3
+		_: return 1
+
+static func get_tile_texture(tile_char: String, pos: Vector2i = Vector2i.ZERO, frame: int = 0) -> Texture2D:
+	var key := tile_char + "_f" + str(frame % get_animation_frame_count(tile_char))
 	if tile_char == "#":
 		var variant := (pos.x + pos.y) % 2
-		key = "#_" + str(variant)
+		key += "_" + str(variant)
 
 	if _textures.has(key):
 		return _textures[key]
 
-	var texture := _create_tile_texture(key, tile_char)
+	var texture := _create_tile_texture(key, tile_char, frame)
 	_textures[key] = texture
 	return texture
 
-static func _create_tile_texture(key: String, tile_char: String) -> Texture2D:
+static func _create_tile_texture(key: String, tile_char: String, frame: int = 0) -> Texture2D:
+	var phase := frame % get_animation_frame_count(tile_char)
 	match tile_char:
 		"#":
 			if key.ends_with("_1"):
-				return _build_texture_from_strings(STONE_ROWS_1, {
+				return _build_texture_from_strings(_animate_rows(STONE_ROWS_1, tile_char, phase), {
 					"S": Palette.STONE_LIGHT,
 					"s": Palette.STONE_DARK,
 					"I": Palette.INK,
 				})
 			else:
-				return _build_texture_from_strings(STONE_ROWS_0, {
+				return _build_texture_from_strings(_animate_rows(STONE_ROWS_0, tile_char, phase), {
 					"S": Palette.STONE_LIGHT,
 					"s": Palette.STONE_DARK,
 					"I": Palette.INK,
 				})
 		"B":
-			return _build_texture_from_strings(WATER_PIXEL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(WATER_PIXEL_ROWS, tile_char, phase), {
 				"L": Palette.WATER_LIGHT,
 				"M": Palette.WATER_MID,
 				"D": Palette.WATER_DARK,
 			})
 		"W":
-			return _build_texture_from_strings(WATER_FILL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(WATER_FILL_ROWS, tile_char, phase), {
 				"L": Palette.WATER_LIGHT,
 				"M": Palette.WATER_MID,
 				"D": Palette.WATER_DARK,
 			})
 		"R":
-			return _build_texture_from_strings(LAVA_PIXEL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(LAVA_PIXEL_ROWS, tile_char, phase), {
 				"L": Palette.LAVA_LIGHT,
 				"M": Palette.LAVA_MID,
 				"D": Palette.LAVA_DARK,
 			})
 		"L":
-			return _build_texture_from_strings(LAVA_FILL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(LAVA_FILL_ROWS, tile_char, phase), {
 				"L": Palette.LAVA_LIGHT,
 				"M": Palette.LAVA_MID,
 				"D": Palette.LAVA_DARK,
 			})
 		"G":
-			return _build_texture_from_strings(VINE_PIXEL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(VINE_PIXEL_ROWS, tile_char, phase), {
 				"L": Palette.VINE_LIGHT,
 				"M": Palette.VINE_MID,
 				"D": Palette.VINE_DARK,
 			})
 		"V":
-			return _build_texture_from_strings(VINE_FILL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(VINE_FILL_ROWS, tile_char, phase), {
 				"L": Palette.VINE_LIGHT,
 				"M": Palette.VINE_MID,
 				"D": Palette.VINE_DARK,
 				"I": Palette.INK,
 			})
 		"Y":
-			return _build_texture_from_strings(SPARK_PIXEL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(SPARK_PIXEL_ROWS, tile_char, phase), {
 				"L": Palette.SPARK_LIGHT,
 				"M": Palette.SPARK_MID,
 				"D": Palette.SPARK_DARK,
 			})
 		"S":
-			return _build_texture_from_strings(SPARK_FILL_ROWS, {
+			return _build_texture_from_strings(_animate_rows(SPARK_FILL_ROWS, tile_char, phase), {
 				"L": Palette.SPARK_LIGHT,
 				"M": Palette.SPARK_MID,
 				"D": Palette.SPARK_DARK,
 				"I": Palette.INK,
 			})
 		"E":
-			return _build_texture_from_strings(EXIT_DOOR_ROWS, {
+			return _build_texture_from_strings(_animate_rows(EXIT_DOOR_ROWS, tile_char, phase), {
 				"S": Palette.STONE_LIGHT,
 				"s": Palette.STONE_DARK,
 				"I": Palette.INK,
@@ -394,13 +407,13 @@ static func _create_tile_texture(key: String, tile_char: String) -> Texture2D:
 				"Y": Palette.SPARK_LIGHT,
 			})
 		"H":
-			return _build_texture_from_strings(HEART_ROWS, {
+			return _build_texture_from_strings(_animate_rows(HEART_ROWS, tile_char, phase), {
 				"L": Palette.PINK,
 				"S": Palette.SPARK_LIGHT,
 				"I": Palette.INK,
 			})
 		"r":
-			return _build_texture_from_strings(ORB_ROWS, {
+			return _build_texture_from_strings(_animate_rows(ORB_ROWS, tile_char, phase), {
 				"L": Palette.LAVA_LIGHT,
 				"M": Palette.LAVA_MID,
 				"D": Palette.LAVA_DARK,
@@ -428,7 +441,7 @@ static func _create_tile_texture(key: String, tile_char: String) -> Texture2D:
 				"I": Palette.INK,
 			})
 		"*":
-			return _build_texture_from_strings(GEM_ROWS, {
+			return _build_texture_from_strings(_animate_rows(GEM_ROWS, tile_char, phase), {
 				"P": Palette.PINK,
 				"S": Palette.SPARK_LIGHT,
 				"I": Palette.INK,
@@ -454,3 +467,36 @@ static func _build_flat_tile(color: Color) -> Texture2D:
 	var img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	img.fill(color)
 	return ImageTexture.create_from_image(img)
+
+static func _animate_rows(source: Array[String], tile_char: String, phase: int) -> Array[String]:
+	var rows: Array[String] = source.duplicate()
+	# Reuse the same 16x16 definitions and shift only highlight pixels: this
+	# keeps frame dimensions, palette membership, and cache behavior stable.
+	if tile_char in ["B", "W"]:
+		var ripple_y := 1 + phase * 3
+		rows[ripple_y] = _replace_at(rows[ripple_y], 2, "L")
+		rows[ripple_y] = _replace_at(rows[ripple_y], 3, "L")
+	elif tile_char in ["R", "L"]:
+		var bubble_y := 5 + phase * 2
+		rows[bubble_y] = _replace_at(rows[bubble_y], 4 + phase % 4, "L")
+	elif tile_char in ["G", "V"]:
+		var leaf_y := 3 + phase * 5
+		rows[leaf_y] = _replace_at(rows[leaf_y], 3 + phase, "L")
+	elif tile_char in ["Y", "S"]:
+		var spark_y := 10 + phase
+		rows[spark_y] = _replace_at(rows[spark_y], 4 + phase * 2, "L")
+	elif tile_char == "H":
+		var pulse := 6 if phase % 2 == 0 else 7
+		rows[pulse] = _replace_at(rows[pulse], 6, "L")
+	elif tile_char == "E":
+		var glow := 2 + phase
+		rows[glow] = _replace_at(rows[glow], 7, "Y")
+	elif tile_char in ["r", "b", "g", "y", "*"]:
+		var sparkle_y := 4 + phase
+		rows[sparkle_y] = _replace_at(rows[sparkle_y], 5 + phase, "L" if tile_char != "*" else "S")
+	return rows
+
+static func _replace_at(row: String, index: int, value: String) -> String:
+	if index < 0 or index >= row.length():
+		return row
+	return row.substr(0, index) + value + row.substr(index + 1)

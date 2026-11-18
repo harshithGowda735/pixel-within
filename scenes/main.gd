@@ -19,6 +19,10 @@ var recolor_wave_center := Vector2i(-1, -1)
 var recolor_wave_timer := 0.0
 var recolor_wave_duration := 0.6
 var recolor_wave_color: Color = Palette.WATER_MID
+var visual_time := 0.0
+var tile_frame := 0
+var previous_floor := false
+var previous_facing := true
 
 func _ready() -> void:
 	# 1. Setup Camera2D
@@ -69,6 +73,16 @@ func _ready() -> void:
 			_on_world_swapped(cur, Vector2(spawn.x * 16.0 + 4.0, spawn.y * 16.0 + 4.0))
 
 func _process(delta: float) -> void:
+	visual_time += delta
+	tile_frame = int(floor(visual_time * 6.0))
+	if player != null and not player.is_dead:
+		if player.is_on_floor and not previous_floor:
+			_spawn_dust(player.sim_position + Vector2(4, 12), Palette.STONE_LIGHT)
+		if player.facing_right != previous_facing and absf(player.velocity.x) > 20.0:
+			_spawn_dust(player.sim_position + Vector2(4, 11), Palette.SPARK_LIGHT)
+		previous_floor = player.is_on_floor
+		previous_facing = player.facing_right
+	queue_redraw()
 	# Update shockwave particles
 	if not shockwave_particles.is_empty():
 		var surviving: Array = []
@@ -356,14 +370,27 @@ func _spawn_heart_shockwave(heart_pos: Vector2i, pigment: String) -> void:
 			"size": 2.0 if (i % 2 == 0) else 3.0,
 		})
 
+func _spawn_dust(origin: Vector2, color: Color) -> void:
+	for i in range(3):
+		var direction := -1.0 if i % 2 == 0 else 1.0
+		shockwave_particles.append({
+			"pos": origin + Vector2(float(i - 1), 0),
+			"vel": Vector2(direction * (8.0 + i * 3.0), -10.0 - i * 2.0),
+			"lifetime": 0.16,
+			"max_lifetime": 0.16,
+			"color": color if i != 1 else Palette.SPARK_MID,
+			"size": 1.0 if i != 1 else 2.0,
+		})
+
 func _draw() -> void:
 	if not level_data.get("valid", false):
 		return
 
 	var grid: Dictionary = level_data.get("grid", {})
+	PixelBackground.draw(self, level_data.get("key", "canvas_01"), visual_time)
 	for pos in grid.keys():
 		var tile_char: String = grid[pos]
-		var tex := Tiles.get_tile_texture(tile_char, pos)
+		var tex := Tiles.get_tile_texture(tile_char, pos, tile_frame)
 		draw_texture(tex, Vector2(pos.x * Tiles.TILE_SIZE, pos.y * Tiles.TILE_SIZE))
 
 	# Recolor wave expanding outward tile-by-tile
@@ -382,6 +409,7 @@ func _draw() -> void:
 		draw_rect(Rect2(p["pos"].x, p["pos"].y, p["size"], p["size"]), p["color"])
 
 	# 4px HUD strip at bottom (y: 176 to 180)
+	draw_rect(Rect2(0, 176, 320, 4), Palette.INK)
 	draw_line(Vector2(0, 176), Vector2(320, 176), Palette.STONE_DARK, 1.0)
 	
 	# Draw breadcrumbs and held pigment indicator in the HUD strip
@@ -392,8 +420,9 @@ func _draw_hud() -> void:
 	if game_node == null:
 		return
 
-	# Breadcrumbs: one 3x3 swatch per depth (Section 3.5)
-	draw_rect(Rect2(4, 177, 3, 3), Palette.STONE_LIGHT)
+	# Breadcrumbs: 8x8 swatches with a 1px gap, scaled down to the 4px HUD
+	# strip by drawing a crisp 4x4 core and a 1px top/left keyline.
+	draw_rect(Rect2(4, 176, 8, 4), Palette.STONE_LIGHT)
 
 	for i in range(game_node.stack.size()):
 		var entry: Dictionary = game_node.stack[i]
@@ -404,7 +433,8 @@ func _draw_hud() -> void:
 			"B": swatch_color = Palette.WATER_MID
 			"G": swatch_color = Palette.VINE_MID
 			"Y": swatch_color = Palette.SPARK_MID
-		draw_rect(Rect2(4 + (i + 1) * 6, 177, 3, 3), swatch_color)
+		var sx := 4 + (i + 1) * 10
+		draw_rect(Rect2(sx, 176, 8, 4), swatch_color)
 
 	# Held pigment indicator at right side of HUD (x: 300..316)
 	if not game_node.held.is_empty():
@@ -414,4 +444,5 @@ func _draw_hud() -> void:
 			"b": pigment_color = Palette.WATER_LIGHT
 			"g": pigment_color = Palette.VINE_LIGHT
 			"y": pigment_color = Palette.SPARK_LIGHT
-		draw_rect(Rect2(310, 177, 6, 3), pigment_color)
+		draw_rect(Rect2(306, 176, 10, 4), Palette.STONE_DARK)
+		draw_rect(Rect2(307, 176, 8, 4), pigment_color)

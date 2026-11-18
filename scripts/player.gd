@@ -72,6 +72,11 @@ var current_pigment := ""
 # Sprite textures
 var texture_right: Texture2D
 var texture_left: Texture2D
+var animation_state := "idle"
+var animation_frame := 0
+var animation_timer := 0.0
+var animation_textures_right: Dictionary = {}
+var animation_textures_left: Dictionary = {}
 
 const SPRITE_RIGHT_ROWS: Array[String] = [
 	"  ....    ",
@@ -89,6 +94,37 @@ const SPRITE_RIGHT_ROWS: Array[String] = [
 	" .ss.ss.  ",
 	"  .. ..   ",
 ]
+
+const SPRITE_IDLE_1_ROWS: Array[String] = [
+	"  ....    ", " .YYYY.   ", " .Y.YY.   ", " .YYYY.   ", ".PPPPPP.  ", ".PPPPPPPP.",
+	" .YYYY.  .", " .YYYY... ", " .YYYY.   ", " .YYYY.   ", " .YY.YY.  ", " .YY.YY.  ", "  .ss..   ", "  .. ..   ",
+]
+const SPRITE_RUN_0_ROWS := SPRITE_RIGHT_ROWS
+const SPRITE_RUN_1_ROWS: Array[String] = [
+	"  ....    ", " .YYYY.   ", " .Y.YY.   ", " .YYYY.   ", ".PPPPPP.  ", ".PPPPPPPP.",
+	" .YYYY... ", " .YYYY.   ", " .YYYY.   ", " .YYYY.   ", " .YY.YY.  ", " .YY.YY.  ", "  ..ss.   ", "   .. ..  ",
+]
+const SPRITE_RUN_2_ROWS := SPRITE_IDLE_1_ROWS
+const SPRITE_RUN_3_ROWS: Array[String] = [
+	"  ....    ", " .YYYY.   ", " .Y.YY.   ", " .YYYY.   ", ".PPPPPP.  ", ".PPPPPPPP.",
+	" .YYYY... ", " .YYYY.   ", " .YYYY.   ", " .YYYY.   ", " .YY.YY.  ", " .YY.YY.  ", "  .ss..   ", " .. ..    ",
+]
+const SPRITE_JUMP_ROWS: Array[String] = [
+	"  ....    ", " .YYYY.   ", " .Y.YY.   ", " .YYYY.   ", ".PPPPPP.  ", ".PPPPPPPP.",
+	" .YYYY.  .", " .YYYY... ", " .YYYY.   ", " .YYYY.   ", " .YY.YY.  ", " .YY.YY.  ", "  .. ..   ", " .ss..ss. ",
+]
+const SPRITE_FALL_ROWS := SPRITE_JUMP_ROWS
+const SPRITE_LAND_ROWS: Array[String] = [
+	"  ....    ", " .YYYY.   ", " .Y.YY.   ", " .YYYY.   ", ".PPPPPP.  ", ".PPPPPPPP.",
+	" .YYYY.  .", " .YYYY... ", " .YYYY.   ", " .YYYY.   ", " .YY.YY.  ", " .YY.YY.  ", " .ss.ss.  ", " .. ..    ",
+]
+const SPRITE_SWIM_0_ROWS := SPRITE_RIGHT_ROWS
+const SPRITE_SWIM_1_ROWS: Array[String] = [
+	"  ....    ", " .YYYY.   ", " .Y.YY.   ", " .YYYY.   ", ".PPPPPP.  ", ".PPPPPPPP.",
+	" .YYYY.  .", " .YYYY... ", " .YYYY.   ", " .YYYY.   ", " .YY.YY.  ", " .YY.YY.  ", " .ss.ss.  ", "   .. ..  ",
+]
+const SPRITE_CLIMB_0_ROWS := SPRITE_RIGHT_ROWS
+const SPRITE_CLIMB_1_ROWS := SPRITE_RUN_1_ROWS
 
 func get_game_singleton() -> Node:
 	if not is_inside_tree():
@@ -112,6 +148,7 @@ func setup(level_grid: Dictionary, spawn_tile: Vector2i) -> void:
 
 func _physics_process(delta: float) -> void:
 	update_physics(delta)
+	_update_animation(delta)
 	# Align Node2D position to integer coordinates for pixel-perfect rendering
 	position = Vector2(round(sim_position.x), round(sim_position.y))
 	queue_redraw()
@@ -448,17 +485,61 @@ func update_body_color(pigment: String) -> void:
 			# Neutral light body when holding no pigment (Section 3.4)
 			body_color = Palette.SPARK_LIGHT
 
-	texture_right = _create_sprite_texture(SPRITE_RIGHT_ROWS, body_color)
-
-	# Flipped left texture
-	var left_rows: Array[String] = []
-	for row in SPRITE_RIGHT_ROWS:
-		var flipped := ""
-		for i in range(row.length() - 1, -1, -1):
-			flipped += row[i]
-		left_rows.append(flipped)
-	texture_left = _create_sprite_texture(left_rows, body_color)
+	animation_textures_right.clear()
+	animation_textures_left.clear()
+	var states := {
+		"idle": [SPRITE_RIGHT_ROWS, SPRITE_IDLE_1_ROWS],
+		"run": [SPRITE_RUN_0_ROWS, SPRITE_RUN_1_ROWS, SPRITE_RUN_2_ROWS, SPRITE_RUN_3_ROWS],
+		"jump": [SPRITE_JUMP_ROWS],
+		"fall": [SPRITE_FALL_ROWS],
+		"land": [SPRITE_LAND_ROWS],
+		"swim": [SPRITE_SWIM_0_ROWS, SPRITE_SWIM_1_ROWS],
+		"climb": [SPRITE_CLIMB_0_ROWS, SPRITE_CLIMB_1_ROWS],
+	}
+	for state in states:
+		for i in range(states[state].size()):
+			var rows: Array[String] = states[state][i]
+			animation_textures_right[state + str(i)] = _create_sprite_texture(rows, body_color)
+			animation_textures_left[state + str(i)] = _create_sprite_texture(_flip_rows(rows), body_color)
+	texture_right = animation_textures_right["idle0"]
+	texture_left = animation_textures_left["idle0"]
 	queue_redraw()
+
+func _update_animation(delta: float) -> void:
+	var next_state := "idle"
+	if is_dead:
+		next_state = "death"
+	elif is_climbing:
+		next_state = "climb"
+	elif is_swimming:
+		next_state = "swim"
+	elif velocity.y < -10.0:
+		next_state = "jump"
+	elif velocity.y > 35.0:
+		next_state = "fall"
+	elif absf(velocity.x) > 8.0:
+		next_state = "run"
+	elif is_on_floor:
+		next_state = "idle"
+	if next_state != animation_state:
+		animation_state = next_state
+		animation_frame = 0
+		animation_timer = 0.0
+	else:
+		animation_timer += delta
+		var fps := 8.0 if animation_state == "run" else 4.0
+		if animation_timer >= 1.0 / fps:
+			animation_timer = 0.0
+			animation_frame = (animation_frame + 1) % _state_frame_count(animation_state)
+	if animation_state != "death":
+		texture_right = animation_textures_right.get(animation_state + str(animation_frame), animation_textures_right.get("idle0"))
+		texture_left = animation_textures_left.get(animation_state + str(animation_frame), animation_textures_left.get("idle0"))
+
+func _state_frame_count(state: String) -> int:
+	match state:
+		"run": return 4
+		"swim", "climb": return 2
+		_: return 2 if state == "idle" else 1
 
 func _draw() -> void:
 	if is_dead:
@@ -563,3 +644,12 @@ func _create_sprite_texture(rows: Array[String], body_color: Color) -> Texture2D
 			img.set_pixel(x, y, color)
 
 	return ImageTexture.create_from_image(img)
+
+func _flip_rows(rows: Array[String]) -> Array[String]:
+	var flipped_rows: Array[String] = []
+	for row in rows:
+		var flipped := ""
+		for i in range(row.length() - 1, -1, -1):
+			flipped += row[i]
+		flipped_rows.append(flipped)
+	return flipped_rows
