@@ -73,7 +73,7 @@ const COLOR_MAP: Dictionary = {
 	"pink": PINK,
 }
 
-func is_palette_color(c: Color) -> bool:
+static func is_palette_color(c: Color) -> bool:
 	for palette_color in ALL_COLORS:
 		if c.is_equal_approx(palette_color):
 			return true
