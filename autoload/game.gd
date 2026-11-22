@@ -1,11 +1,15 @@
 extends Node
 
+const SaveManagerScript = preload("res://scripts/save_manager.gd")
+
 # Pixel Within - Core Game State Manager (Milestone M3)
 # Central state model as specified in Sections 3.1, 3.4, 3.5, 3.7 and 9.
 
 signal world_swapped(world_state: Dictionary, player_pos: Vector2)
 signal pigment_changed(new_pigment: String)
 signal heart_painted(new_color: String)
+signal gem_collected(current_count: int, total_count: int)
+signal level_completed(level_id: String, stars: int, gems: int, total_gems: int)
 
 # Cached world instances, keyed by path string:
 # e.g. "canvas_01", "canvas_01/10,9:R"
@@ -20,8 +24,14 @@ var held: String = ""
 var held_source_world: String = ""
 var held_source_cell: Vector2i = Vector2i(-1, -1)
 
-# Active world key
+# Active world key and level tracking
 var current_world_key: String = ""
+var current_canvas_key: String = "canvas_01"
+var selected_level_path: String = "res://levels/canvas_01.txt"
+var selected_level_key: String = "canvas_01"
+var level_gems_collected: int = 0
+var level_gems_total: int = 0
+var collected_gems_set: Dictionary = {} # "world_key:x,y" -> true
 
 # Guard against re-entrant world swaps
 var is_swapping: bool = false
@@ -48,11 +58,22 @@ func start_canvas(file_path: String, world_key: String = "canvas_01") -> bool:
 	held = ""
 	held_source_world = ""
 	held_source_cell = Vector2i(-1, -1)
+	current_canvas_key = world_key
+	selected_level_path = file_path
+	selected_level_key = world_key
+	level_gems_collected = 0
+	level_gems_total = 0
+	collected_gems_set.clear()
 
 	var world_data := LevelLoader.load_level(file_path)
 	if not world_data.get("valid", false):
 		push_error("Failed to load level: " + world_data.get("error", "Unknown error"))
 		return false
+
+	# Count gems in canvas level
+	for pos in world_data["grid"].keys():
+		if world_data["grid"][pos] == "*":
+			level_gems_total += 1
 
 	world_data["key"] = world_key
 	world_data["color"] = ""
@@ -94,7 +115,14 @@ func dive(cell: Vector2i) -> bool:
 
 	# Load child world if not yet cached
 	if not states.has(child_key):
-		var file_path: String = CHILD_WORLD_FILES.get(tile_char, "")
+		var file_path: String = ""
+		var root_level: String = current_world_key.split("/")[0]
+		var custom_child := "res://levels/" + root_level + "_" + tile_char.to_lower() + ".txt"
+		if FileAccess.file_exists(custom_child):
+			file_path = custom_child
+		else:
+			file_path = CHILD_WORLD_FILES.get(tile_char, "")
+
 		if file_path.is_empty() or not FileAccess.file_exists(file_path):
 			push_error("Child world file not found for tile: " + tile_char)
 			return false
@@ -103,6 +131,15 @@ func dive(cell: Vector2i) -> bool:
 		if not child_data.get("valid", false):
 			push_error("Failed to load child world: " + child_data.get("error", ""))
 			return false
+
+		# Track gems from newly entered child world
+		for pos in child_data["grid"].keys():
+			if child_data["grid"][pos] == "*":
+				var k := child_key + ":" + str(pos.x) + "," + str(pos.y)
+				if collected_gems_set.has(k):
+					child_data["grid"][pos] = "."
+				else:
+					level_gems_total += 1
 
 		child_data["key"] = child_key
 		child_data["color"] = tile_char
@@ -223,3 +260,40 @@ func restart_current_world() -> Vector2:
 	var cur := get_current_world()
 	var spawn: Vector2i = cur.get("player_spawn", Vector2i(1, 9))
 	return Vector2(spawn.x * 16.0 + 4.0, spawn.y * 16.0 + 4.0)
+
+# Gem collection
+func collect_gem(cell: Vector2i) -> void:
+	var cur := get_current_world()
+	if cur.is_empty() or not cur.has("grid"):
+		return
+	if cur["grid"].get(cell, "") == "*":
+		cur["grid"][cell] = "."
+		var gem_k := current_world_key + ":" + str(cell.x) + "," + str(cell.y)
+		if not collected_gems_set.has(gem_k):
+			collected_gems_set[gem_k] = true
+			level_gems_collected += 1
+			gem_collected.emit(level_gems_collected, level_gems_total)
+
+# Reaching level exit
+func reach_exit() -> Dictionary:
+	var earned_stars := 1
+	if level_gems_total > 0:
+		if level_gems_collected >= level_gems_total:
+			earned_stars = 3
+		elif float(level_gems_collected) / float(level_gems_total) >= 0.5:
+			earned_stars = 2
+		else:
+			earned_stars = 1
+	else:
+		earned_stars = 3
+
+	SaveManagerScript.complete_level(current_canvas_key, earned_stars, level_gems_collected, level_gems_total)
+	var res := {
+		"level_id": current_canvas_key,
+		"stars": earned_stars,
+		"gems": level_gems_collected,
+		"total_gems": level_gems_total
+	}
+	level_completed.emit(current_canvas_key, earned_stars, level_gems_collected, level_gems_total)
+	return res
+

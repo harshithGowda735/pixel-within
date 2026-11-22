@@ -1,0 +1,16 @@
+name=Depth Two
+type=canvas
+par=3
+solution=dive Y, take yellow orb, surface, dive G, dive R in forest, paint heart yellow, surface, bounce to forest heart, paint heart, surface, bounce on Y to exit, exit
+---
+####################
+#..................#
+#..................#
+#................E.#
+#............#######
+#............#######
+#............#######
+#............#######
+#............#######
+#@..Y...G..*.#######
+####################

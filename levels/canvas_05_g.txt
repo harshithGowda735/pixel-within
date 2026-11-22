@@ -1,0 +1,16 @@
+name=Forest Canopy
+type=child
+par=2
+solution=climb vine, dive R, paint heart yellow, surface, bounce to heart, collect green orb, reach heart
+---
+####################
+#..............H...#
+#.............###..#
+#...V..............#
+#...V...####.R.....#
+#y..V..............#
+####V..............#
+#...V..............#
+#...V...####.......#
+#@..V...####...*...#
+####################

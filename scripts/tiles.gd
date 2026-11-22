@@ -446,7 +446,7 @@ static func _create_tile_texture(key: String, tile_char: String, frame: int = 0)
 				"S": Palette.SPARK_LIGHT,
 				"I": Palette.INK,
 			})
-		"@", ".":
+		"@", ".", "x":
 			return _build_texture_from_strings(AIR_ROWS, {
 				"I": Palette.INK,
 			})

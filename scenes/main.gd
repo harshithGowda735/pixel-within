@@ -1,5 +1,8 @@
 extends Node2D
 
+const GlitchlingScript = preload("res://scripts/glitchling.gd")
+const SaveManagerScript = preload("res://scripts/save_manager.gd")
+
 var level_data: Dictionary = {}
 var player: Player
 var camera: Camera2D
@@ -11,6 +14,15 @@ var overlay_material: ShaderMaterial
 
 # Transition state flags
 var is_transitioning: bool = false
+
+# Glitchling enemies
+var glitchlings: Array = []
+
+# Level completion and ending reveal state
+var level_complete_banner: bool = false
+var level_complete_result: Dictionary = {}
+var is_ending_reveal: bool = false
+var ending_reveal_timer: float = 0.0
 
 # Particles and wave animation
 var shockwave_particles: Array = []
@@ -61,6 +73,7 @@ func _ready() -> void:
 
 	# 4. Instantiate player
 	player = Player.new()
+	player.player_respawned.connect(_on_player_respawned)
 	add_child(player)
 
 	# 5. Start initial canvas level if needed
@@ -72,6 +85,49 @@ func _ready() -> void:
 			var spawn: Vector2i = cur.get("player_spawn", Vector2i(1, 9))
 			_on_world_swapped(cur, Vector2(spawn.x * 16.0 + 4.0, spawn.y * 16.0 + 4.0))
 
+func _on_player_respawned() -> void:
+	for g in glitchlings:
+		g.reset()
+	queue_redraw()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if level_complete_banner:
+		if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_SPACE)):
+			get_tree().change_scene_to_file("res://scenes/level_select.tscn")
+	elif is_ending_reveal:
+		if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_SPACE or event.keycode == KEY_ESCAPE)):
+			get_tree().change_scene_to_file("res://scenes/title_screen.tscn")
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		var game_node = get_node_or_null("/root/Game")
+		if game_node != null and game_node.stack.is_empty():
+			get_tree().change_scene_to_file("res://scenes/level_select.tscn")
+
+func on_player_reached_exit(_exit_pos: Vector2i) -> void:
+	if level_complete_banner or is_ending_reveal or is_transitioning:
+		return
+	var game_node = get_node_or_null("/root/Game")
+	if game_node == null:
+		return
+
+	level_complete_result = game_node.reach_exit()
+	var cur_id: String = level_complete_result.get("level_id", "canvas_01")
+
+	if cur_id == "canvas_06":
+		is_ending_reveal = true
+		ending_reveal_timer = 0.0
+		if player != null:
+			player.input_disabled = true
+			player.velocity = Vector2.ZERO
+		var tween := create_tween().set_parallel(true)
+		tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(camera, "zoom", Vector2(0.5, 0.5), 2.0)
+	else:
+		level_complete_banner = true
+		if player != null:
+			player.input_disabled = true
+			player.velocity = Vector2.ZERO
+	queue_redraw()
+
 func _process(delta: float) -> void:
 	visual_time += delta
 	tile_frame = int(floor(visual_time * 6.0))
@@ -82,6 +138,27 @@ func _process(delta: float) -> void:
 			_spawn_dust(player.sim_position + Vector2(4, 11), Palette.SPARK_LIGHT)
 		previous_floor = player.is_on_floor
 		previous_facing = player.facing_right
+
+	# Update Glitchling enemies
+	if not is_transitioning and not level_complete_banner and not is_ending_reveal:
+		var cur_grid: Dictionary = level_data.get("grid", {})
+		for g in glitchlings:
+			g.update(delta, cur_grid)
+			if player != null and not player.is_dead and not g.is_dead:
+				if player.get_hitbox().intersects(g.get_hitbox()):
+					# Stomp check: downward velocity and feet above glitchling top half
+					if player.velocity.y >= 0.0 and (player.sim_position.y + Player.HITBOX_HEIGHT) <= (g.sim_position.y + 6.0):
+						g.die()
+						player.velocity.y = GlitchlingScript.BOUNCE_VELOCITY
+						player.is_on_floor = false
+						player.coyote_timer = 0.0
+						_spawn_dust(g.sim_position + Vector2(4, 4), Palette.PINK)
+					else:
+						player.die()
+
+	if is_ending_reveal:
+		ending_reveal_timer += delta
+
 	queue_redraw()
 	# Update shockwave particles
 	if not shockwave_particles.is_empty():
@@ -104,8 +181,14 @@ func _process(delta: float) -> void:
 
 func _on_world_swapped(world_state: Dictionary, player_pos: Vector2) -> void:
 	level_data = world_state
+	glitchlings.clear()
+	var grid: Dictionary = world_state.get("grid", {})
+	for pos in grid.keys():
+		if grid[pos] == "x":
+			glitchlings.append(GlitchlingScript.new(Vector2(pos.x * 16.0 + 4.0, pos.y * 16.0 + 8.0)))
+
 	if player != null:
-		player.grid = world_state.get("grid", {})
+		player.grid = grid
 		player.spawn_position = Vector2(world_state.get("player_spawn", Vector2i(1, 9)).x * 16.0 + 4.0, world_state.get("player_spawn", Vector2i(1, 9)).y * 16.0 + 4.0)
 		player.sim_position = player_pos
 		player.position = player_pos.round()
@@ -393,6 +476,10 @@ func _draw() -> void:
 		var tex := Tiles.get_tile_texture(tile_char, pos, tile_frame)
 		draw_texture(tex, Vector2(pos.x * Tiles.TILE_SIZE, pos.y * Tiles.TILE_SIZE))
 
+	# Draw Glitchling enemies
+	for g in glitchlings:
+		g.draw(self)
+
 	# Recolor wave expanding outward tile-by-tile
 	if recolor_wave_active and recolor_wave_center != Vector2i(-1, -1):
 		var current_r := (recolor_wave_timer / recolor_wave_duration) * 22.0
@@ -415,6 +502,33 @@ func _draw() -> void:
 	# Draw breadcrumbs and held pigment indicator in the HUD strip
 	_draw_hud()
 
+	# Level complete banner
+	if level_complete_banner:
+		draw_rect(Rect2(40, 35, 240, 110), Palette.INK)
+		draw_rect(Rect2(40, 35, 240, 110), Palette.STONE_LIGHT, false, 1.0)
+		PixelFont.draw_text(self, "LEVEL COMPLETE", Vector2(98, 48), Palette.SPARK_LIGHT, 1, 1)
+
+		var star_count: int = level_complete_result.get("stars", 1)
+		var star_str := ""
+		for s in range(star_count):
+			star_str += "* "
+		PixelFont.draw_text(self, star_str.strip_edges(), Vector2(136, 68), Palette.SPARK_MID, 1, 2)
+
+		var gems_c: int = level_complete_result.get("gems", 0)
+		var gems_t: int = level_complete_result.get("total_gems", 0)
+		var gem_str := "GEMS: " + str(gems_c) + "/" + str(gems_t)
+		PixelFont.draw_text(self, gem_str, Vector2(118, 92), Palette.PINK, 1, 1)
+		PixelFont.draw_text(self, "PRESS ENTER TO CONTINUE", Vector2(74, 118), Palette.STONE_LIGHT, 1, 1)
+
+	# Ending Reveal overlay
+	if is_ending_reveal:
+		draw_rect(Rect2(20, 25, 280, 130), Palette.INK)
+		draw_rect(Rect2(20, 25, 280, 130), Palette.VINE_LIGHT, false, 1.0)
+		PixelFont.draw_text(self, "EVERY PIXEL IS A WORLD.", Vector2(65, 45), Palette.SPARK_LIGHT, 1, 1)
+		PixelFont.draw_text(self, "YOU HAVE RESTORED THE CANVAS.", Vector2(40, 70), Palette.VINE_LIGHT, 1, 1)
+		PixelFont.draw_text(self, "ALL WORLDS ARE CONNECTED.", Vector2(58, 95), Palette.WATER_LIGHT, 1, 1)
+		PixelFont.draw_text(self, "PRESS ENTER TO RETURN", Vector2(78, 125), Palette.STONE_LIGHT, 1, 1)
+
 func _draw_hud() -> void:
 	var game_node = get_node_or_null("/root/Game")
 	if game_node == null:
@@ -436,6 +550,19 @@ func _draw_hud() -> void:
 		var sx := 4 + (i + 1) * 10
 		draw_rect(Rect2(sx, 176, 8, 4), swatch_color)
 
+	# Draw gem collectibles in HUD (centered around x: 160)
+	var total_g: int = int(game_node.level_gems_total)
+	var coll_g: int = int(game_node.level_gems_collected)
+	if total_g > 0:
+		var start_x := 160 - int(total_g * 6 * 0.5)
+		for g_i in range(total_g):
+			var gx := start_x + g_i * 6
+			if g_i < coll_g:
+				draw_rect(Rect2(gx, 176, 4, 3), Palette.PINK)
+				draw_rect(Rect2(gx + 1, 177, 2, 1), Palette.SPARK_LIGHT)
+			else:
+				draw_rect(Rect2(gx, 176, 4, 3), Palette.STONE_DARK, false, 1.0)
+
 	# Held pigment indicator at right side of HUD (x: 300..316)
 	if not game_node.held.is_empty():
 		var pigment_color := Palette.SPARK_LIGHT
@@ -446,3 +573,4 @@ func _draw_hud() -> void:
 			"y": pigment_color = Palette.SPARK_LIGHT
 		draw_rect(Rect2(306, 176, 10, 4), Palette.STONE_DARK)
 		draw_rect(Rect2(307, 176, 8, 4), pigment_color)
+

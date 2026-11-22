@@ -1,6 +1,9 @@
 class_name Player
 extends Node2D
 
+signal player_died
+signal player_respawned
+
 # Hitbox configuration
 const HITBOX_WIDTH := 8.0
 const HITBOX_HEIGHT := 12.0
@@ -431,6 +434,22 @@ func check_tile_triggers() -> void:
 				var game_node := get_game_singleton()
 				if game_node != null:
 					game_node.collect_pigment(tile, pos)
+			elif tile == "*":
+				# Collect gem!
+				var game_node := get_game_singleton()
+				if game_node != null:
+					game_node.collect_gem(pos)
+				grid[pos] = "."
+			elif tile == "E":
+				# Reached exit in canvas level!
+				var game_node := get_game_singleton()
+				if game_node != null and game_node.stack.is_empty():
+					var main_node = get_parent()
+					if main_node != null and main_node.has_method("on_player_reached_exit"):
+						main_node.on_player_reached_exit(pos)
+					else:
+						game_node.reach_exit()
+
 
 func is_tile_solid(tx: int, ty: int) -> bool:
 	if tx < 0 or tx >= 20 or ty < 0:
@@ -449,6 +468,7 @@ func die() -> void:
 	is_dead = true
 	death_timer = DEATH_FREEZE_TIME
 	velocity = Vector2.ZERO
+	player_died.emit()
 
 	# Restore held pigment on death (Section 3.7)
 	var game_node := get_game_singleton()
@@ -468,6 +488,8 @@ func respawn() -> void:
 	coyote_timer = 0.0
 	jump_buffer_timer = 0.0
 	prev_jump_held = false
+	player_respawned.emit()
+
 
 func update_body_color(pigment: String) -> void:
 	current_pigment = pigment

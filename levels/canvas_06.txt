@@ -1,0 +1,16 @@
+name=Zoom Out
+type=canvas
+par=4
+solution=dive B, take blue orb, surface, dive R, paint heart blue, surface, dive G, take green orb, surface, dive R, paint heart green, surface, dive Y, take yellow orb, surface, dive R, paint heart yellow, surface, bounce on Y to exit, exit
+---
+####################
+#........#........E#
+#........#.......###
+#........#....Y.R.##
+#........#...#######
+#........#...#######
+#........#..R#######
+#........#.#########
+#.......##...#######
+#@.B...R.G.*.#######
+####################
