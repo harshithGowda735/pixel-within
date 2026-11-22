@@ -184,13 +184,32 @@ func _init() -> void:
 	# 6. Step onto transformed pixel Y at (10, 9) -> Launch to high exit!
 	p2.grid = g2.get_current_world()["grid"]
 	p2.sim_position = Vector2(10 * 16.0 + 4.0, 9 * 16.0 + 4.0)
-	p2.velocity.y = 5.0
+	p2.velocity = Vector2(100.0, 5.0)
 	p2.check_tile_triggers()
 	assert(p2.velocity.y == PlayerScript.SPARK_BOUNCE_VELOCITY)
-	# Player reaches high ledge at row 2 and walks to Exit E at (17, 2)
-	p2.sim_position = Vector2(17 * 16.0 + 4.0, 2 * 16.0 + 4.0)
-	assert(g2.get_current_world()["grid"][Vector2i(17, 2)] == "E")
-	print("PASS: Canvas Level 2 solved! Bounced on Y to high exit E at (17, 2)")
+
+	# Simulate actual physics frames to verify player clears the wall and lands on the ledge
+	var dt := 1.0 / 60.0
+	var landed_on_ledge := false
+	for frame in range(120):
+		p2.velocity.x = 100.0
+		p2.velocity.y = minf(p2.velocity.y + p2.GRAVITY * dt, p2.TERMINAL_VELOCITY)
+		p2.move_and_collide_custom(dt)
+		p2.check_tile_triggers()
+		if p2.sim_position.x >= 13 * 16.0 and p2.is_on_floor:
+			landed_on_ledge = true
+			break
+	assert(landed_on_ledge == true)
+
+	# Walk to Exit Door E at (17, 3)
+	for frame in range(60):
+		p2.velocity.x = 100.0
+		p2.velocity.y = minf(p2.velocity.y + p2.GRAVITY * dt, p2.TERMINAL_VELOCITY)
+		p2.move_and_collide_custom(dt)
+		if p2.sim_position.x >= 17 * 16.0:
+			break
+	assert(g2.get_current_world()["grid"][Vector2i(17, 3)] == "E")
+	print("PASS: Canvas Level 2 solved! Bounced on Y to high exit E at (17, 3) with real frame physics")
 
 	# --- Test 6: Canvas Level 3 (Wet Feet) End-to-End Simulation ---
 	print("\n[Test 6] Simulating Canvas Level 3 (Wet Feet) complete solution...")
