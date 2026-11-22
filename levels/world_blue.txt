@@ -1,14 +1,14 @@
 name=Ocean
 type=child
 par=1
-solution=swim up, take blue orb, reach heart
+solution=swim through deep ocean, collect blue orb, navigate to surface air pocket and heart
 ---
 ####################
 #........H.........#
 #.......###........#
-#..................#
-#..................#
-#...b..............#
+#......WWWWWW......#
+#......WWWWWW......#
+#...b..WWWWWW......#
 #WWWWWWWWWWWWWWWWWW#
 #WWWWWWWWWWWWWWWWWW#
 #WWWWWWWWWWWWWWWWWW#

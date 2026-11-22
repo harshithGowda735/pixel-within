@@ -1,0 +1,16 @@
+name=Relay
+type=canvas
+par=4
+solution=dive B, take blue orb, surface, dive R, paint heart blue, surface, dive G, take green orb, surface, jump to platform, dive R, paint heart green, climb vine, exit
+---
+####################
+#.......#..........#
+#.......#........E.#
+#.......#.......####
+#.......#.......####
+#.......#.......####
+#.......#......R####
+#.......#....##.####
+#.......#.......####
+#@..B...R...G...####
+####################

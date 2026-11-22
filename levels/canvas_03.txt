@@ -1,0 +1,16 @@
+name=Wet Feet
+type=canvas
+par=2
+solution=dive B, take blue orb, surface, dive R, paint heart blue, swim through tunnel, exit
+---
+####################
+#.........#........#
+#.........#........#
+#.........#........#
+#.........#........#
+#.........#........#
+#@..B.....#......E.#
+#####WWWWW#WWWW#####
+#####WWWWW#WWWW#####
+#####WWWWWRWWWW#####
+####################
