@@ -34,7 +34,9 @@ func _select_option(idx: int) -> void:
 				break
 			elif SaveManagerScript.is_unlocked(lvl):
 				target_lvl = lvl
-		Game.start_canvas("res://levels/" + target_lvl + ".txt", target_lvl)
+		var game_node = get_node_or_null("/root/Game")
+		if game_node != null:
+			game_node.start_canvas("res://levels/" + target_lvl + ".txt", target_lvl)
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 	elif idx == 1:
 		get_tree().change_scene_to_file("res://scenes/level_select.tscn")

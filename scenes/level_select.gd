@@ -38,7 +38,9 @@ func _select_level(idx: int) -> void:
 	if not SaveManagerScript.is_unlocked(lvl_id):
 		return
 	var path := "res://levels/" + lvl_id + ".txt"
-	Game.start_canvas(path, lvl_id)
+	var game_node = get_node_or_null("/root/Game")
+	if game_node != null:
+		game_node.start_canvas(path, lvl_id)
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _draw() -> void:

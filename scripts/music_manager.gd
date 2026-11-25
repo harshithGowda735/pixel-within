@@ -27,9 +27,9 @@ func load_and_play() -> void:
 			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 			# Seamless loop covering the full sample count
 			stream.loop_begin = 0
-			stream.loop_end = stream.data.size() / 2 # 16-bit mono
+			stream.loop_end = 0
 			player.stream = stream
-			player.volume_db = -6.0
+			player.volume_db = -2.0
 			if not is_muted and is_inside_tree():
 				player.play()
 	else:

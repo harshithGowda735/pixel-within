@@ -37,6 +37,7 @@ var previous_floor := false
 var previous_facing := true
 
 func _ready() -> void:
+	visible = true
 	# 1. Setup Camera2D
 	camera = Camera2D.new()
 	camera.anchor_mode = Camera2D.ANCHOR_MODE_DRAG_CENTER
