@@ -480,6 +480,32 @@ func _draw() -> void:
 	for g in glitchlings:
 		g.draw(self)
 
+	# Action Prompts when near Chroma Pixel or Heart
+	if player != null and not player.is_dead and not is_transitioning:
+		if player.nearest_dive_target != Vector2i(-1, -1):
+			var tx := player.nearest_dive_target.x * 16.0
+			var ty := player.nearest_dive_target.y * 16.0
+			var prompt_x := clampf(tx - 10.0, 4.0, 270.0)
+			var prompt_y := maxf(ty - 10.0, 4.0)
+			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 44, 11), Palette.INK)
+			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 44, 11), Palette.SPARK_MID, false, 1.0)
+			PixelFont.draw_text(self, "Z: DIVE", Vector2(prompt_x + 2, prompt_y), Palette.SPARK_LIGHT, 1, 1)
+
+		if player.nearest_heart_target != Vector2i(-1, -1):
+			var hx := player.nearest_heart_target.x * 16.0
+			var hy := player.nearest_heart_target.y * 16.0
+			var prompt_x := clampf(hx - 14.0, 4.0, 260.0)
+			var prompt_y := maxf(hy - 10.0, 4.0)
+			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 50, 11), Palette.INK)
+			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 50, 11), Palette.PINK, false, 1.0)
+			PixelFont.draw_text(self, "X: PAINT", Vector2(prompt_x + 2, prompt_y), Palette.SPARK_LIGHT, 1, 1)
+
+		var game_node = get_node_or_null("/root/Game")
+		if game_node != null and not game_node.stack.is_empty():
+			draw_rect(Rect2(236, 4, 80, 11), Palette.INK)
+			draw_rect(Rect2(236, 4, 80, 11), Palette.STONE_DARK, false, 1.0)
+			PixelFont.draw_text(self, "C: SURFACE", Vector2(240, 6), Palette.WATER_LIGHT, 1, 1)
+
 	# Recolor wave expanding outward tile-by-tile
 	if recolor_wave_active and recolor_wave_center != Vector2i(-1, -1):
 		var current_r := (recolor_wave_timer / recolor_wave_duration) * 22.0
