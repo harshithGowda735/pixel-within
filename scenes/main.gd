@@ -483,23 +483,40 @@ func _draw() -> void:
 
 	# Action Prompts when near Chroma Pixel or Heart
 	if player != null and not player.is_dead and not is_transitioning:
+		var game_node = get_node_or_null("/root/Game")
 		if player.nearest_dive_target != Vector2i(-1, -1):
 			var tx := player.nearest_dive_target.x * 16.0
 			var ty := player.nearest_dive_target.y * 16.0
-			var prompt_x := clampf(tx - 10.0, 4.0, 270.0)
+			var prompt_x := clampf(tx - 10.0, 4.0, 260.0)
 			var prompt_y := maxf(ty - 10.0, 4.0)
-			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 44, 11), Palette.INK)
-			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 44, 11), Palette.SPARK_MID, false, 1.0)
-			PixelFont.draw_text(self, "Z: DIVE", Vector2(prompt_x + 2, prompt_y), Palette.SPARK_LIGHT, 1, 1)
+			var has_pigment := (game_node != null and not game_node.held.is_empty())
+			var prompt_text := "Z/X: DIVE" if has_pigment else "Z: DIVE"
+			var box_w := 54.0 if has_pigment else 44.0
+			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, box_w, 11), Palette.INK)
+			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, box_w, 11), Palette.SPARK_MID, false, 1.0)
+			PixelFont.draw_text(self, prompt_text, Vector2(prompt_x + 2, prompt_y), Palette.SPARK_LIGHT, 1, 1)
 
 		if player.nearest_heart_target != Vector2i(-1, -1):
 			var hx := player.nearest_heart_target.x * 16.0
 			var hy := player.nearest_heart_target.y * 16.0
-			var prompt_x := clampf(hx - 14.0, 4.0, 260.0)
+			var prompt_x := clampf(hx - 14.0, 4.0, 240.0)
 			var prompt_y := maxf(hy - 10.0, 4.0)
-			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 50, 11), Palette.INK)
-			draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 50, 11), Palette.PINK, false, 1.0)
-			PixelFont.draw_text(self, "X: PAINT", Vector2(prompt_x + 2, prompt_y), Palette.SPARK_LIGHT, 1, 1)
+			var held_p: String = game_node.held if game_node != null else ""
+			var cur_w: Dictionary = game_node.get_current_world() if game_node != null else {}
+			var cur_c: String = cur_w.get("color", "")
+
+			if held_p.is_empty():
+				draw_rect(Rect2(prompt_x - 6, prompt_y - 2, 72, 11), Palette.INK)
+				draw_rect(Rect2(prompt_x - 6, prompt_y - 2, 72, 11), Palette.STONE_DARK, false, 1.0)
+				PixelFont.draw_text(self, "NEED PIGMENT", Vector2(prompt_x - 2, prompt_y), Palette.STONE_LIGHT, 1, 1)
+			elif held_p.to_upper() == cur_c:
+				draw_rect(Rect2(prompt_x - 4, prompt_y - 2, 68, 11), Palette.INK)
+				draw_rect(Rect2(prompt_x - 4, prompt_y - 2, 68, 11), Palette.STONE_DARK, false, 1.0)
+				PixelFont.draw_text(self, "SAME COLOR", Vector2(prompt_x, prompt_y), Palette.STONE_LIGHT, 1, 1)
+			else:
+				draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 50, 11), Palette.INK)
+				draw_rect(Rect2(prompt_x - 2, prompt_y - 2, 50, 11), Palette.PINK, false, 1.0)
+				PixelFont.draw_text(self, "X: PAINT", Vector2(prompt_x + 2, prompt_y), Palette.SPARK_LIGHT, 1, 1)
 
 		var game_node = get_node_or_null("/root/Game")
 		if game_node != null and not game_node.stack.is_empty():

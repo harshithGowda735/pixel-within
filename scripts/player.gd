@@ -36,6 +36,7 @@ const DEATH_FREEZE_TIME := 0.50
 
 # Dive and interaction range
 const DIVE_INTERACTION_RADIUS := 24.0
+const HEART_INTERACTION_RADIUS := 36.0
 
 # State variables
 var sim_position := Vector2.ZERO
@@ -270,29 +271,71 @@ func handle_game_interactions() -> void:
 
 	# Z: Dive into nearest chroma pixel
 	if is_dive_just_pressed():
-		if nearest_dive_target != Vector2i(-1, -1):
-			var main_node = get_parent()
-			if main_node != null and main_node.has_method("start_dive_transition"):
-				main_node.start_dive_transition(nearest_dive_target)
-			else:
-				game_node.dive(nearest_dive_target)
+		_try_dive()
 
 	# C or Esc: Surface to parent world
 	if is_surface_just_pressed():
-		var main_node = get_parent()
-		if main_node != null and main_node.has_method("start_surface_transition"):
-			main_node.start_surface_transition()
-		else:
-			game_node.surface()
+		_try_surface()
 
 	# X: Paint heart
 	if is_paint_just_pressed():
-		if nearest_heart_target != Vector2i(-1, -1):
-			var main_node = get_parent()
-			if main_node != null and main_node.has_method("start_paint_transition"):
-				main_node.start_paint_transition(nearest_heart_target, game_node.held)
-			else:
-				game_node.paint_heart(game_node.held)
+		_try_paint_heart()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if input_disabled or is_dead:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_X or event.physical_keycode == KEY_X:
+			_try_paint_heart()
+		elif event.keycode == KEY_Z or event.physical_keycode == KEY_Z:
+			_try_dive()
+		elif event.keycode == KEY_C or event.physical_keycode == KEY_C:
+			_try_surface()
+
+func _try_dive() -> void:
+	if input_disabled or is_dead:
+		return
+	var game_node := get_game_singleton()
+	if game_node == null:
+		return
+	if nearest_dive_target != Vector2i(-1, -1):
+		var main_node = get_parent()
+		if main_node != null and main_node.has_method("start_dive_transition"):
+			main_node.start_dive_transition(nearest_dive_target)
+		else:
+			game_node.dive(nearest_dive_target)
+
+func _try_surface() -> void:
+	if input_disabled or is_dead:
+		return
+	var game_node := get_game_singleton()
+	if game_node == null:
+		return
+	var main_node = get_parent()
+	if main_node != null and main_node.has_method("start_surface_transition"):
+		main_node.start_surface_transition()
+	else:
+		game_node.surface()
+
+func _try_paint_heart() -> void:
+	if input_disabled or is_dead:
+		return
+	var game_node := get_game_singleton()
+	if game_node == null:
+		return
+	if nearest_heart_target != Vector2i(-1, -1):
+		var main_node = get_parent()
+		if main_node != null and main_node.has_method("start_paint_transition"):
+			main_node.start_paint_transition(nearest_heart_target, game_node.held)
+		else:
+			game_node.paint_heart(game_node.held)
+	elif nearest_dive_target != Vector2i(-1, -1) and not game_node.held.is_empty():
+		# Player pressed X near a chroma pixel while holding pigment -> dive into it to reach and paint its heart!
+		var main_node = get_parent()
+		if main_node != null and main_node.has_method("start_dive_transition"):
+			main_node.start_dive_transition(nearest_dive_target)
+		else:
+			game_node.dive(nearest_dive_target)
 
 func update_interaction_targets() -> void:
 	nearest_dive_target = Vector2i(-1, -1)
@@ -300,14 +343,14 @@ func update_interaction_targets() -> void:
 
 	var center := sim_position + Vector2(HITBOX_WIDTH * 0.5, HITBOX_HEIGHT * 0.5)
 	var min_dive_dist := DIVE_INTERACTION_RADIUS
-	var min_heart_dist := DIVE_INTERACTION_RADIUS
+	var min_heart_dist := HEART_INTERACTION_RADIUS
 
-	# Check grid cells within 2 tiles radius
+	# Check grid cells within 3 tiles radius
 	var center_tx := int(floor(center.x / 16.0))
 	var center_ty := int(floor(center.y / 16.0))
 
-	for ty in range(center_ty - 2, center_ty + 3):
-		for tx in range(center_tx - 2, center_tx + 3):
+	for ty in range(center_ty - 3, center_ty + 4):
+		for tx in range(center_tx - 3, center_tx + 4):
 			var pos := Vector2i(tx, ty)
 			var tile: String = grid.get(pos, ".")
 			var tile_center := Vector2(tx * 16.0 + 8.0, ty * 16.0 + 8.0)
@@ -635,13 +678,13 @@ func is_jump_input_held() -> bool:
 	return Input.is_physical_key_pressed(KEY_SPACE) or Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP) or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept")
 
 func is_dive_just_pressed() -> bool:
-	return Input.is_physical_key_pressed(KEY_Z) or Input.is_action_just_pressed("dive")
+	return Input.is_physical_key_pressed(KEY_Z) or Input.is_key_pressed(KEY_Z) or Input.is_action_just_pressed("dive")
 
 func is_paint_just_pressed() -> bool:
-	return Input.is_physical_key_pressed(KEY_X) or Input.is_action_just_pressed("paint")
+	return Input.is_physical_key_pressed(KEY_X) or Input.is_key_pressed(KEY_X) or Input.is_action_just_pressed("paint")
 
 func is_surface_just_pressed() -> bool:
-	return Input.is_physical_key_pressed(KEY_C) or Input.is_physical_key_pressed(KEY_ESCAPE) or Input.is_action_just_pressed("surface")
+	return Input.is_physical_key_pressed(KEY_C) or Input.is_key_pressed(KEY_C) or Input.is_physical_key_pressed(KEY_ESCAPE) or Input.is_key_pressed(KEY_ESCAPE) or Input.is_action_just_pressed("surface")
 
 func is_restart_just_pressed() -> bool:
 	return Input.is_physical_key_pressed(KEY_R) or Input.is_action_just_pressed("restart")
